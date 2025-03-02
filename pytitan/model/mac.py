@@ -18,6 +18,18 @@ class MemoryAsContext(nn.Module):
         persistent_memory_dim: int = 16,
         persistent_memory_weight: nn.Module=None,
     ):
+        """ Memory as a context
+        
+        Args:
+            dim_in: int - the input dimension
+            short_term_memory_heads: int - the number of heads for the short term memory
+            long_term_update_chunk_size: int - the chunk size for updating the long term memory
+            long_term_memory_lr: float - the learning rate for the long term memory
+            long_term_memory_dim: int - the dimension of the long term memory
+            long_term_memory_weight: nn.Module - the weight for the long term memory. if None, it will be initialized
+            persistent_memory_dim: int - the dimension of the persistent memory
+            persistent_memory_weight: nn.Module - the weight for the persistent memory. if None, it will be initialized
+        """
         super(MemoryAsContext, self).__init__()
         # is embdedding dim info
         self.persistent_memory = persistent_memory_weight or self.initialize_persistent_memory(persistent_memory_dim)

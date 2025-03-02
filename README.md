@@ -16,6 +16,7 @@ model = NeuralMemory(dim_in=10, dim_out=10, update_chunk_size=4, lr=0.0001)
 x = model.condition(x) # condition
 y = model(x)           # sample
 ```
+One notible change from the paper is that eta and alpha are not data dependent; however, they are used as hyperparameters in the loss, and are updated during training.
 
 ## Memory as Context
 ```python

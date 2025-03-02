@@ -1,23 +1,35 @@
 import torch
 import torch.nn as nn
-from torchviz import make_dot
 from pytitan.model.memory import LinearMemory
 
 class NeuralMemory(nn.Module):
     def __init__(self, 
                 dim_in: int, 
-                dim_out: int, 
+                dim_out: int,
                 update_chunk_size: int,
                 lr: float=1e-3,
+                initial_eta: float=0.7,
+                initial_alpha: float=0.9
             ):
+        """ Neural Memory model
+        
+        Args:
+            dim_in: int - the input dimension
+            dim_out: int - the output dimension
+            update_chunk_size: int - the chunk size for updating the memory
+            lr: float - the learning rate for the memory
+        """
         super(NeuralMemory, self).__init__()
         self.update_chunk_size = update_chunk_size
         self.memory = LinearMemory(dim_in, dim_out, lr)
         self.key = nn.Linear(dim_in, dim_in, bias=True)
         self.value = nn.Linear(dim_in, dim_in, bias=True)
         self.query = nn.Linear(dim_in, dim_in, bias=True)
+        # parameters for the memory
+        self.alpha = nn.Parameter(torch.tensor(initial_alpha))
+        self.eta = nn.Parameter(torch.tensor(initial_eta))
         
-        self.surprise_metric = nn.L1Loss(reduction='sum')
+        self.surprise_metric = nn.L1Loss(reduction='mean') # reduce over batch and sequence length
            
     def condition(self, x) -> torch.Tensor:
         """
@@ -37,7 +49,7 @@ class NeuralMemory(nn.Module):
             s_t_total += s_t.detach()
             # Compute gradients w.r.t. model params
             grads = torch.autograd.grad(s_t, self.memory.get_weights(), create_graph=True, retain_graph=True)
-            self.memory.update(grads, eta=torch.tensor(0.9), alpha=torch.tensor(0.1))
+            self.memory.update(grads, eta=self.eta, alpha=self.alpha)
         return s_t_total 
 
     def forward(self, x, query=True) -> torch.Tensor:
@@ -63,4 +75,6 @@ if __name__ == "__main__":
     print(model.key.weight.grad)
     print(model.value.weight.grad)
     print(model.query.weight.grad)
+    print(model.alpha.grad)
+    print(model.eta.grad)
     
