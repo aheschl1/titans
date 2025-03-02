@@ -40,7 +40,7 @@ class NeuralMemory(nn.Module):
         return self.memory(x)
     
 if __name__ == "__main__":
-    x = torch.randn(12, 10, device="cuda") # tokens 1 x 10
+    x = torch.randn(2, 12, 10, device="cuda") # tokens 1 x 10
     model = NeuralMemory(dim_in=10, dim_out=10)
     model = model.to("cuda")
     

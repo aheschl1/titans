@@ -113,4 +113,4 @@ class LinearMemory(MemoryModule):
         Returns:
         - y: output tensor of shape (batch_size, dim_out)
         """
-        return (self.model@x.permute(1,0)).permute(1,0)
+        return (self.model@x.permute(0, 2,1)).permute(0, 2, 1)
