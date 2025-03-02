@@ -3,7 +3,6 @@ import torch.nn as nn
 from torchviz import make_dot
 from pytitan.model.memory import LinearMemory
 
-
 class NeuralMemory(nn.Module):
     def __init__(self, 
                 dim_in: int, 
