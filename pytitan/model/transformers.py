@@ -1,23 +1,28 @@
 import torch.nn as nn
 import torch
 from pytitan.model.neural_memory import NeuralMemory
+from torchviz import make_dot
 
 class MemoryAsContext(nn.Module):
+    """
+    Memory as context model. This model uses a long term memory, short term memory, and persistent memory to condition the output.
+    """
     def __init__(
         self,
         dim_in: int,
         short_term_memory_heads: int = 8,
         long_term_memory_lr: float = 1e-3,
-        long_term_memory_dim: int = 64,
+        long_term_memory_dim: int = 16,
         long_term_memory_weight: nn.Module=None,
-        persistent_memory_dim: int = 64,
+        persistent_memory_dim: int = 16,
         persistent_memory_weight: nn.Module=None,
     ):
         super(MemoryAsContext, self).__init__()
         self.persistent_memory = persistent_memory_weight or self.initialize_persistent_memory(persistent_memory_dim)
+        self.long_term_memory = long_term_memory_weight or NeuralMemory(dim_in, long_term_memory_dim, long_term_memory_lr)
         embed_dim = dim_in + long_term_memory_dim + persistent_memory_dim
-        self.long_term_memory = long_term_memory_weight or NeuralMemory(embed_dim, long_term_memory_dim, long_term_memory_lr)
-        self.short_term_memory = nn.MultiheadAttention(dim_in, short_term_memory_heads, batch_first=True)
+        self.short_term_memory = nn.MultiheadAttention(embed_dim, short_term_memory_heads, batch_first=True)
+        self.short_term_projection = nn.Linear(embed_dim, dim_in)
             
     def initialize_persistent_memory(self, persistent_memory_dim: int):
         persistent_memory = nn.Parameter(torch.empty(1, persistent_memory_dim, requires_grad=True))
@@ -30,20 +35,26 @@ class MemoryAsContext(nn.Module):
 
         Sample from the long term memory, then short term memory, then update the long term memory, and use the output to gate the short term memory.
         """
+        b = x.shape[0]
+        
         lt_mem = self.long_term_memory(x)
-        st_mem_token = torch.cat([x, lt_mem, self.persistent_memory], dim=1)
+        st_mem_token = torch.cat([self.persistent_memory.expand(b, -1), lt_mem, x], dim=1)
         # apply attention on st_mem_token
-        st_mem = self.short_term_memory(st_mem_token, st_mem_token, st_mem_token)
+        # st_mem_token = st_mem_token.unsqueeze(0)
+        st_mem, _ = self.short_term_memory(st_mem_token, st_mem_token, st_mem_token)
         # update long term memory
+        st_mem = self.short_term_projection(st_mem)
         self.long_term_memory.condition(st_mem)
         # sample from the long term memory
-        y = self.long_term_memory(st_mem)
+        y = self.long_term_memory(st_mem, query=False)
         return st_mem * y
     
 if __name__ == "__main__":
-    x = torch.randn(12, 16, device="cuda") # tokens 1 x 10
+    x = torch.randn(100, 16, device="cuda") # tokens 1 x 10
     model = MemoryAsContext(dim_in=16)
     model = model.to("cuda")
     
     y = model(x)
-    print(y.shape)
+    # visualize the model
+    dot = make_dot(y, params=dict(model.named_parameters()))
+    dot.render("memory_as_context")

@@ -34,8 +34,10 @@ class NeuralMemory(nn.Module):
         self.memory.update(grads, eta=torch.tensor(0.9), alpha=torch.tensor(0.1))
         return s_t
 
-    def forward(self, x):
-        return self.memory(self.query(x))
+    def forward(self, x, query=True) -> torch.Tensor:
+        if query:
+            x = self.query(x)
+        return self.memory(x)
     
 if __name__ == "__main__":
     x = torch.randn(12, 10, device="cuda") # tokens 1 x 10
