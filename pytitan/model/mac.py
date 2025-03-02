@@ -11,6 +11,7 @@ class MemoryAsContext(nn.Module):
         self,
         dim_in: int,
         short_term_memory_heads: int = 8,
+        long_term_update_chunk_size: int = 4,
         long_term_memory_lr: float = 1e-3,
         long_term_memory_dim: int = 16,
         long_term_memory_weight: nn.Module=None,
@@ -18,8 +19,15 @@ class MemoryAsContext(nn.Module):
         persistent_memory_weight: nn.Module=None,
     ):
         super(MemoryAsContext, self).__init__()
+        # is embdedding dim info
         self.persistent_memory = persistent_memory_weight or self.initialize_persistent_memory(persistent_memory_dim)
-        self.long_term_memory = long_term_memory_weight or NeuralMemory(dim_in, long_term_memory_dim, long_term_memory_lr)
+        self.long_term_memory = long_term_memory_weight or NeuralMemory(
+            dim_in, 
+            long_term_memory_dim, 
+            update_chunk_size=long_term_update_chunk_size, 
+            lr=long_term_memory_lr
+        )
+        
         embed_dim = dim_in + long_term_memory_dim + persistent_memory_dim
         self.short_term_memory = nn.MultiheadAttention(embed_dim, short_term_memory_heads, batch_first=True)
         self.short_term_projection = nn.Linear(embed_dim, dim_in)
@@ -56,6 +64,7 @@ if __name__ == "__main__":
     model = model.to("cuda")
     
     y = model(x)
+    print(y.shape)
     # visualize the model
-    dot = make_dot(y, params=dict(model.named_parameters()))
-    dot.render("memory_as_context")
+    # dot = make_dot(y, params=dict(model.named_parameters()))
+    # dot.render("memory_as_context")
