@@ -1,7 +1,6 @@
 import torch.nn as nn
 import torch
 from pytitan.model.neural_memory import NeuralMemory
-from torchviz import make_dot
 
 class MemoryAsContext(nn.Module):
     """

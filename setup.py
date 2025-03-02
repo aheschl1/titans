@@ -6,7 +6,6 @@ setup(
     packages=find_packages(),
     install_requires=[
         'torch',
-        'torchviz',
     ],
     entry_points={
         'console_scripts': [
