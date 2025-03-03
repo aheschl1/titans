@@ -48,11 +48,19 @@ class MemoryAsContext(nn.Module):
         nn.init.xavier_normal_(persistent_memory)
         return persistent_memory
 
-    def forward(self, x):
+    def forward(self, x, return_surprise=False):
         """
         Given an input x, compute the forward pass of the model.
 
         Sample from the long term memory, then short term memory, then update the long term memory, and use the output to gate the short term memory.
+        
+        Args:
+        - x: torch.Tensor - the input tensor
+        - return_surprise: bool - whether to return the surprise metric from conditioning the long term memory
+        
+        Returns:
+        - y: torch.Tensor - the output tensor
+        - surprise: maybe torch.Tensor - the surprise metric
         """
         b = x.shape[0]
         n = x.shape[1]
@@ -66,8 +74,10 @@ class MemoryAsContext(nn.Module):
         st_mem = self.short_term_projection(st_mem)
         self.long_term_memory.condition(st_mem)
         # sample from the long term memory
-        y = self.long_term_memory(st_mem, query=False)
-        return st_mem * y
+        y = self.long_term_memory(st_mem, query=False) * st_mem
+        if return_surprise:
+            return y, self.long_term_memory.condition(st_mem)
+        return y
 
     def zero_grad(self, set_to_none = True):
         self.long_term_memory.zero_grad(set_to_none)

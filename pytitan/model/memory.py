@@ -84,9 +84,7 @@ class MemoryModule(ABC, nn.Module):
         Clears gradients for the memory module while ensuring surprise buffers
         do not retain computation history.
         """
-        for name, buffer in self.named_buffers():
-            if "surprise" in name:
-                continue
+        for name, buffer in self.get_named_weights():
             nb = buffer.detach()
             nb.requires_grad_(True)
             self.register_buffer(name, nb)  # Detach from computation graph

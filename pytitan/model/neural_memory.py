@@ -1,3 +1,4 @@
+from typing import List
 import torch
 import torch.nn as nn
 from pytitan.model.memory import LinearMemory
@@ -31,25 +32,25 @@ class NeuralMemory(nn.Module):
         
         self.surprise_metric = nn.L1Loss(reduction='mean') # reduce over batch and sequence length
            
-    def condition(self, x) -> torch.Tensor:
+    def condition(self, x) -> List[float]:
         """
         Condition the model on the input x
         
         Returns:
-        - surprise: the surprise metric
+        - surprise: the surprise loss for each chunk
         """
         # prepare the grad. inner loop only updates the model
         # chunk by chunk
         chunks = torch.split(x, self.update_chunk_size, dim=1)
-        s_t_total = 0
+        s_ts = []
         for x in chunks:
             k = self.key(x)
             v = self.value(x)
             s_t = self.surprise_metric(self.memory(k), v) # L1Loss
-            s_t_total += s_t.detach()
+            s_ts.append(s_t.item())
             # Compute gradients w.r.t. model params
             self.memory.update(s_t, eta=self.eta, alpha=self.alpha)
-        return s_t_total 
+        return s_ts
 
     def forward(self, x, query=True) -> torch.Tensor:
         """
