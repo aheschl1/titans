@@ -48,8 +48,7 @@ class NeuralMemory(nn.Module):
             s_t = self.surprise_metric(self.memory(k), v) # L1Loss
             s_t_total += s_t.detach()
             # Compute gradients w.r.t. model params
-            grads = torch.autograd.grad(s_t, self.memory.get_weights(), create_graph=True, retain_graph=True)
-            self.memory.update(grads, eta=self.eta, alpha=self.alpha)
+            self.memory.update(s_t, eta=self.eta, alpha=self.alpha)
         return s_t_total 
 
     def forward(self, x, query=True) -> torch.Tensor:
@@ -59,6 +58,11 @@ class NeuralMemory(nn.Module):
         if query:
             x = self.query(x)
         return self.memory(x)
+    
+    def zero_grad(self, set_to_none = True):
+        self.memory.zero_grad(set_to_none)
+        return super().zero_grad(set_to_none)
+     
 
     
 if __name__ == "__main__":

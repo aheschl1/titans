@@ -6,6 +6,9 @@ setup(
     packages=find_packages(),
     install_requires=[
         'torch',
+        'pandas',
+        'numpy',
+        "tqdm"
     ],
     entry_points={
         'console_scripts': [

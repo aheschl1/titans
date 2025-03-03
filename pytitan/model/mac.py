@@ -18,7 +18,7 @@ class MemoryAsContext(nn.Module):
         persistent_memory_weight: nn.Module=None,
     ):
         """ Memory as a context
-        
+
         Args:
             dim_in: int - the input dimension
             short_term_memory_heads: int - the number of heads for the short term memory
@@ -38,16 +38,16 @@ class MemoryAsContext(nn.Module):
             update_chunk_size=long_term_update_chunk_size, 
             lr=long_term_memory_lr
         )
-        
+
         embed_dim = dim_in + long_term_memory_dim + persistent_memory_dim
         self.short_term_memory = nn.MultiheadAttention(embed_dim, short_term_memory_heads, batch_first=True)
         self.short_term_projection = nn.Linear(embed_dim, dim_in)
-            
+
     def initialize_persistent_memory(self, persistent_memory_dim: int):
         persistent_memory = nn.Parameter(torch.empty(1, 1, persistent_memory_dim, requires_grad=True))
         nn.init.xavier_normal_(persistent_memory)
         return persistent_memory
-            
+
     def forward(self, x):
         """
         Given an input x, compute the forward pass of the model.
@@ -56,7 +56,7 @@ class MemoryAsContext(nn.Module):
         """
         b = x.shape[0]
         n = x.shape[1]
-                
+
         lt_mem = self.long_term_memory(x)
         st_mem_token = torch.cat([self.persistent_memory.expand(b, n, -1), lt_mem, x], dim=2)
         # apply attention on st_mem_token
@@ -68,6 +68,10 @@ class MemoryAsContext(nn.Module):
         # sample from the long term memory
         y = self.long_term_memory(st_mem, query=False)
         return st_mem * y
+
+    def zero_grad(self, set_to_none = True):
+        self.long_term_memory.zero_grad(set_to_none)
+        return super().zero_grad(set_to_none)
     
 if __name__ == "__main__":
     x = torch.randn(2, 100, 16, device="cuda") # tokens 1 x 10
@@ -75,6 +79,8 @@ if __name__ == "__main__":
     model = model.to("cuda")
     
     y = model(x)
+    loss = nn.L1Loss()(x, y)
+    loss.backward()
     print(y.shape)
     # visualize the model
     # dot = make_dot(y, params=dict(model.named_parameters()))

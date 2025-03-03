@@ -64,19 +64,34 @@ class MemoryModule(ABC, nn.Module):
                 warning(f"Gradient for weight is None. Skipping update.")
                 continue
             surpise = eta*past_surprise + self.lr*grad # surprise_t = eta*surprise_{t-1} + lr*grad
-            self.register_buffer(sname, surpise)
+            self.register_buffer(sname, surpise.detach())  # Detach from computation graph
             self.register_buffer(name, (1-alpha)*weight + surpise)
     
-    def update(self, grads, eta, alpha):
+    def update(self, loss, eta, alpha):
         """
         Update the memory with the gradients
         
         Args:
-        - grads: the gradients
+        - loss: the loss function to optimize
         - eta: data dependent momentum
         - alpha: decay factor
         """
+        grads = torch.autograd.grad(loss, self.get_weights(), create_graph=True)
         self._update_memory(grads, eta, alpha)
+
+    def zero_grad(self, set_to_none=True):
+        """
+        Clears gradients for the memory module while ensuring surprise buffers
+        do not retain computation history.
+        """
+        for name, buffer in self.named_buffers():
+            if "surprise" in name:
+                continue
+            nb = buffer.detach()
+            nb.requires_grad_(True)
+            self.register_buffer(name, nb)  # Detach from computation graph
+        return super().zero_grad(set_to_none)
+
     
     @staticmethod
     def _get_corresponding_surprise_name(name):
