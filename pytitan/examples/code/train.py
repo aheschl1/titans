@@ -15,9 +15,10 @@ def train():
         vocab_size=dset.get_vocab_size(),
         padding_value=dset.tokenizer.pad_token_id
     ).to("cuda")
+    print("loading model")
     
     loader = get_loader(dset, 20)
-    optimizer = optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-5)
+    optimizer = optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-6)
     scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=1e-4, max_lr=0.001, mode="triangular2")
     criterion = nn.CrossEntropyLoss()
     losses = []
@@ -43,7 +44,7 @@ def train():
             
             if i % 1000 == 0:
                 print(f"Epoch {epoch} Iter {i} Loss: {loss.item()} LR: {scheduler.get_last_lr()}")
-                torch.save(model.state_dict(), "code_model.pth")
+                torch.save(model.state_dict(), "code_model2.pth")
 
         losses.append(sum(epoch_losses) / len(epoch_losses))
         print(f"Epoch {epoch} Loss: {losses[-1]}")
